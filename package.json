@@ -1,0 +1,22 @@
+{
+  "name": "aws-crud",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.113.0",
+    "@aws-sdk/util-dynamodb": "^3.113.0",
+    "serverless-iam-roles-per-function": "^3.2.0",
+    "serverless-offline": "^9.2.0",
+    "uuidv4": "^6.2.13"
+  },
+  "devDependencies": {
+    "serverless-dynamodb-local": "^0.2.24"
+  }
+}

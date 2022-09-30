@@ -1,0 +1,214 @@
+service: aws-crud
+
+provider:
+  name: aws
+  runtime: nodejs16.x
+  stage: dev
+  region: us-east-1
+  environment:
+    DYNAMODB_TABLE_NAME: ${self:custom.postsTableName}
+    DYNAMODB_COMMENT_TABLE: ${self:custom.commentsTableName}
+
+custom:
+  postsTableName: post-table-${self:provider.stage}
+  commentsTableName: comments-table-${self:provider.stage}
+  dynamodb:
+    stages:
+      - dev
+    start:
+      port: 8000
+      inMemory: true
+      migrate: true
+    # migration:
+    #   dir: offline/migrations
+  serverless-offline:
+    resourceRoutes: true
+
+plugins:
+  - serverless-iam-roles-per-function
+  - serverless-offline
+  - serverless-dynamodb-local
+
+functions:
+
+  getPost:
+    handler: lambdas/getPostById.getPost
+    name: get-post
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: posts/{userId}
+          method: GET
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:Query"
+        Resource: !GetAtt PostsTable.Arn
+
+  createPost:
+    handler: lambdas/createPost.createPost
+    name: create-post
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: post
+          method: POST
+          cors: true 
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:PutItem"
+        Resource: !GetAtt PostsTable.Arn
+
+  updatePost:
+    handler: lambdas/updatePost.updatePost
+    name: update-post
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: post/{postId}/{userId}
+          method: PUT
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:UpdateItem"
+        Resource: !GetAtt PostsTable.Arn
+
+  deletePost:
+    handler: lambdas/deletePost.deletePost
+    name: delete-post
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: post/{postId}/{userId}
+          method: DELETE
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:DeleteItem"
+        Resource: !GetAtt PostsTable.Arn
+
+  getAllPosts:
+    handler: lambdas/getPosts.getAllPosts
+    name: get-all-posts
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: posts
+          method: GET
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:Scan"
+        Resource: !GetAtt PostsTable.Arn
+
+  createComment:
+    handler: lambdas/createComment.createComment
+    name: create-comment
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: comment
+          method: POST
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:PutItem"
+        Resource: !GetAtt CommentsTable.Arn
+
+  getComment:
+    handler: lambdas/getComment.getComment
+    name: get-comment
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: comment/{postId}
+          method: GET
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:Query"
+        Resource: !GetAtt CommentsTable.Arn
+
+  deleteComment:
+    handler: lambdas/deleteComment.deleteComment
+    name: delete-comment
+    memorySize: 128 # mb
+    timeout: 5 # seconds
+    events:
+      - http:
+          path: comment/{postId}/{commentId}
+          method: DELETE
+          cors: true
+    iamRoleStatements:
+      - Effect: "Allow"
+        Action:
+          - "dynamodb:DeleteItem"
+        Resource: !GetAtt CommentsTable.Arn
+
+
+resources:
+  Resources:
+
+# Posts Table
+    PostsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.postsTableName}
+        AttributeDefinitions:
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: userId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: postId
+            KeyType: HASH
+          - AttributeName: userId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        GlobalSecondaryIndexes:
+        - IndexName: userId-posId-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: postId
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
+  # Comments Table
+    CommentsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:custom.commentsTableName}
+        AttributeDefinitions:
+          - AttributeName: postId
+            AttributeType: S
+          - AttributeName: commentId
+            AttributeType: S
+        KeySchema:
+          - AttributeName: postId
+            KeyType: HASH
+          - AttributeName: commentId
+            KeyType: RANGE
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
